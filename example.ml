@@ -45,7 +45,13 @@ val r :
 
 let _ = run (r())
 
+(* output:
 
+2468
+
+ *)
+
+            
 let p2 () = 
   send _0 7777 >>
   recv_slot _0 _1 >>
@@ -66,6 +72,12 @@ let r2 () =
   p2 ()
 
 let _ = run (r2())
+
+(* output:
+
+6666
+
+ *)
 
 let rec p3 n =
     if n>10 then 
@@ -90,7 +102,19 @@ let r3 () =
 
 let _ = run (r3 ())
 
-(* let v () = branch {alt=Alt(_0,fun _ -> failwith "")} *)
+(* output:
 
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+
+ *)
 
 let _ = Async.Std.Scheduler.go()
