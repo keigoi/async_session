@@ -1,6 +1,6 @@
-OCAMLC=ocamlfind ocamlc -rectypes -thread -package async
-OCAMLOPT=ocamlfind ocamlopt -rectypes -thread -package async
-OCAMLMKTOP=ocamlfind ocamlmktop -rectypes -thread -package async
+OCAMLC=ocamlfind ocamlc -g -rectypes -thread -package async
+OCAMLOPT=ocamlfind ocamlopt -g -rectypes -thread -package async
+OCAMLMKTOP=ocamlfind ocamlmktop -g -rectypes -thread -package async
 OCAMLDEP=ocamlfind ocamldep
 INCLUDES=                 # all relevant -I options here
 OCAMLFLAGS=$(INCLUDES)    # add other options for ocamlc here
@@ -10,7 +10,7 @@ CMI=session.cmi
 BYTE_OBJS=session.cmo example.cmo
 NATIVE_OBJS=$(BYTE_OBJS:%.cmo=%.cmx)
 
-all: test.native
+all: test.byte
 
 test.native: $(NATIVE_OBJS) $(CMI)
 	$(OCAMLOPT) -linkpkg -o test.native $(OCAMLFLAGS) $(NATIVE_OBJS)

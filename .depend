@@ -1,3 +1,5 @@
 session.cmi :
+example.cmo : session.cmi
+example.cmx : session.cmx
 session.cmo : session.cmi
 session.cmx : session.cmi
