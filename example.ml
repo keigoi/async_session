@@ -43,8 +43,6 @@ val r :
           monad
 *)
 
-let _ = run (r())
-
 (* output:
 
 2468
@@ -71,8 +69,6 @@ let r2 () =
   fork _0 (q2 ()) >>
   p2 ()
 
-let _ = run (r2())
-
 (* output:
 
 6666
@@ -91,16 +87,16 @@ let rec p3 n =
 
 let rec q3 () = 
   branch _0
-    (_0,recv _0 >>= fun x ->
+    (_0,fun _ ->
+        recv _0 >>= fun x ->
         send _0 (string_of_int x) >>
         q3 ())
-    (_0,close _0)
+    (_0,fun _ ->
+        close _0)
 
 let r3 () =
   fork _0 (q3 ()) >>
   p3 1
-
-let _ = run (r3 ())
 
 (* output:
 
@@ -125,10 +121,40 @@ let r4 () =
   send _0 (x ^ "World!") >>
   close _0
 
-let _ = run (r4 ())        
 (* output:
 
 Hello, World!
 
  *)        
+
+let r5 () =
+  let proc =
+    recv _0 >>= fun i ->
+    Printf.printf "My no. is %d.\n" i;
+    flush_all();
+    close _0
+  in
+  let rec duplicate = function
+    | 0 -> ret ()
+    | n ->
+       fork _1 proc >>
+       LinList.put _0 _1 >>
+       duplicate (n-1)
+  in
+  let rec send_repeat cnt =
+    LinList.take
+      (_0, _1, fun _ ->
+               send _1 cnt >>
+               close _1 >>
+               send_repeat (cnt+1))
+      (_0, fun _ ->
+           ret ())
+  in
+  LinList.nil _0 >>
+  duplicate 10 >>
+  send_repeat 0
+  
+
+let _ = run (r () >> r2 () >> r3 () >> r4 () >> r5 ())
+
 let _ = Async.Std.Scheduler.go()

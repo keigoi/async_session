@@ -1,5 +1,5 @@
-open Async_core
-module Ivar = Raw_ivar
+module Ivar = Async_core.Raw_ivar
+module Scheduler = Async.Std.Scheduler                
 
 type ('a,'b,'p,'q) idx = ('p -> 'a) * ('p -> 'b -> 'q)
 type ('hd, 'tl) cons = 'hd * 'tl
@@ -92,27 +92,37 @@ let select_right (get,set) p =
   Ivar.fill c (BranchRight(s,c'));
   Ivar.create_full (set p (Chan(s,t,c')), ())
 
-let branch :
-  (('s,'t,('t,'k1,'k2)branch)channel, empty, 'p, 'q) idx ->
-  (empty,('s,'t,'k1)channel, 'q,'q1) idx * ('q1,'r,'a) monad ->
-  (empty,('s,'t,'k2)channel, 'q,'q2) idx * ('q2,'r,'a) monad ->
-  ('p,'r,'a) monad = fun (get0,set0) ((get1,set1),m1) ((get2,set2),m2) p ->
+let branch (get0,set0) ((get1,set1),f1) ((get2,set2),f2) p =
   let Chan(s,t,c), q = get0 p, set0 p Empty in
   let ret = Ivar.create () in
   Ivar.upon c
             (function
               | BranchLeft(_,c') ->
-                 Ivar.connect ~bind_rhs:(m1 (set1 q (Chan(s,t,c')))) ~bind_result:ret
+                 Ivar.connect ~bind_rhs:(f1 () (set1 q (Chan(s,t,c')))) ~bind_result:ret
               | BranchRight(_,c') ->
-                 Ivar.connect ~bind_rhs:(m2 (set2 q (Chan(s,t,c')))) ~bind_result:ret
+                 Ivar.connect ~bind_rhs:(f2 () (set2 q (Chan(s,t,c')))) ~bind_result:ret
             );
   ret
 
 
 let fork (get,set) m p =
   let ivar = Ivar.create () in
-  m (Chan(Neg,Pos,ivar),all_empty);
+  Scheduler.within (fun _ -> ignore (m (Chan(Neg,Pos,ivar),all_empty)));
   Ivar.create_full (set p (Chan(Pos,Neg,ivar)), ())
+
+module LinList = struct                   
+  let nil (_,set) p = Ivar.create_full (set p [], ())
+  let put (get0,set0) (get1,set1) p =
+    let q = set1 p Empty in
+    Ivar.create_full (set0 q (get1 p::get0 q), ())
+  let take ((get0,set0),(get1,set1),f0) ((_,set2),f2) p =
+    match get0 p with
+    | x::xs ->
+       let ret = Ivar.create () in
+       Ivar.upon (f0 () (set1 (set0 p xs) x)) (Ivar.fill ret);
+       ret
+    | [] -> f2 () (set2 p Empty)
+end
 
 module Routine = struct
   let send v (Chan(s,t,c)) =

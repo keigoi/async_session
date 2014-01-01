@@ -65,14 +65,24 @@ val select_right :
   ('p,'q,unit) monad
 val branch : 
   (('s,'t,('t,'k1,'k2)branch)channel, empty, 'p, 'q) idx ->
-  (empty,('s,'t,'k1)channel, 'q,'q1) idx * ('q1,'r,'a) monad ->
-  (empty,('s,'t,'k2)channel, 'q,'q2) idx * ('q2,'r,'a) monad ->
+  (empty,('s,'t,'k1)channel, 'q,'q1) idx * (unit -> ('q1,'r,'a) monad) ->
+  (empty,('s,'t,'k2)channel, 'q,'q2) idx * (unit -> ('q2,'r,'a) monad) ->
   ('p,'r,'a) monad
 
 val fork : 
   (empty, (pos,neg,'k)channel, 'p, 'q) idx -> 
   (((neg,pos,'k)channel, all_empty) cons, all_empty, unit) monad -> 
   ('p,'q,unit) monad
+
+module LinList : sig
+  val nil : (empty,'a list,'p,'q) idx -> ('p,'q,unit) monad
+  val put : ('a list,'a list,'q,'r) idx -> ('a,empty,'p,'q) idx -> ('p,'r,unit)monad
+  val take : ('a list,'a list,'p,'p) idx * (empty,'a,'p,'q1) idx * (unit -> ('q1,'r,'b) monad) ->
+             ('a list,empty,'p,'q2) idx * (unit -> ('q2,'r,'b) monad) ->
+             ('p,'r,'b) monad
+  (*val map : ('a list,'b list,'p,'q) idx -> ('c -> (('a,all_empty)cons,('b,all_empty)cons,'c)monad) -> 'c -> ('p,'q,'c) monad*)
+end
+               
 module Routine : sig
   val send : 'v -> (('s,'t,('s,'v,'k)shot)channel, ('s,'t,'k) channel, unit) monad
   val recv : (('s,'t,('t,'v,'k)shot)channel, ('s,'t,'k) channel, 'v) monad
