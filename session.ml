@@ -36,6 +36,7 @@ type ('s,'v,'k) shot = Shot of 's * 'v * 'k Ivar.t
 type ('s,'c,'k) pass = Pass of 's * 'c * 'k Ivar.t
 type ('s,'k1,'k2) branch = BranchLeft of 's * 'k1 Ivar.t | BranchRight of 's * 'k2 Ivar.t
 type finish = unit
+type ('s,'t,'v,'w,'k) yield = ('s,'v,('t,'w,'k)shot)shot
 
 type ('s,'t,'k) channel = Chan of 's * 't * 'k Ivar.t
 
@@ -113,3 +114,25 @@ let fork (get,set) m p =
   m (Chan(Neg,Pos,ivar),all_empty);
   Ivar.create_full (set p (Chan(Pos,Neg,ivar)), ())
 
+module Routine = struct
+  let send v (Chan(s,t,c)) =
+    let c' = Ivar.create () in
+    Ivar.fill c (Shot(s,v,c'));
+    Ivar.create_full (Chan(s,t,c'),())
+  
+  let recv (Chan(s,t,c)) =
+    let ret = Ivar.create () in
+    Ivar.upon c (fun (Shot(_,v,c')) -> Ivar.fill ret (Chan(s,t,c'),v));
+    ret
+  
+  let close (Chan(_,_,_)) =
+    Ivar.create_full (Empty, ())
+
+  let yield v = send v >> recv
+end
+
+let run_routine (get,set) m p =
+  let c = Ivar.create () in
+  m (Chan(Neg,Pos,c));
+  Ivar.create_full (set p (Chan(Pos,Neg,c)), ())
+                 

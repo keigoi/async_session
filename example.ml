@@ -117,4 +117,18 @@ let _ = run (r3 ())
 
  *)
 
+let r4 () =
+  run_routine
+    _0
+    Routine.(send "Hello, " >> recv >>= fun x -> print_endline x; close) >>
+  recv _0 >>= fun x ->
+  send _0 (x ^ "World!") >>
+  close _0
+
+let _ = run (r4 ())        
+(* output:
+
+Hello, World!
+
+ *)        
 let _ = Async.Std.Scheduler.go()

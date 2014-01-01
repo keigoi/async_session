@@ -22,6 +22,7 @@ type ('s, 'v, 'k) shot
 type ('s, 'c, 'k) pass
 type ('s, 'k1, 'k2) branch
 type finish
+type ('s,'t,'v,'w,'k) yield = ('s,'v,('t,'w,'k)shot)shot
        
 type pos and neg
 
@@ -71,4 +72,15 @@ val branch :
 val fork : 
   (empty, (pos,neg,'k)channel, 'p, 'q) idx -> 
   (((neg,pos,'k)channel, all_empty) cons, all_empty, unit) monad -> 
+  ('p,'q,unit) monad
+module Routine : sig
+  val send : 'v -> (('s,'t,('s,'v,'k)shot)channel, ('s,'t,'k) channel, unit) monad
+  val recv : (('s,'t,('t,'v,'k)shot)channel, ('s,'t,'k) channel, 'v) monad
+  val close : (('s,'t,finish)channel, empty, unit) monad
+  val yield : 'v -> (('s,'t,('s,'t,'v,'w,'k)yield)channel, ('s,'t,'k)channel, 'w) monad
+end
+
+val run_routine :
+  (empty, (pos,neg,'k)channel, 'p, 'q) idx ->
+  ((neg,pos,'k)channel, empty, unit) monad ->
   ('p,'q,unit) monad
