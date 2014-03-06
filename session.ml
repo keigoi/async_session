@@ -2,7 +2,7 @@ module Ivar = Async_core.Raw_ivar
 module Scheduler = Async.Std.Scheduler                
 
 type ('a,'b,'p,'q) idx = ('p -> 'a) * ('p -> 'b -> 'q)
-type ('hd, 'tl) cons = 'hd * 'tl
+type ('hd, 'tl) slot = 'hd * 'tl
 type empty = Empty
 type all_empty = empty * all_empty
 
@@ -35,15 +35,15 @@ type pos = Pos and neg = Neg
 type ('s,'v,'k) shot = Shot of 's * 'v * 'k Ivar.t
 type ('s,'c,'k) pass = Pass of 's * 'c * 'k Ivar.t
 type ('s,'k1,'k2) branch = BranchLeft of 's * 'k1 Ivar.t | BranchRight of 's * 'k2 Ivar.t
-type finish = unit
+type fini = unit
 type ('s,'t,'v,'w,'k) yield = ('s,'v,('t,'w,'k)shot)shot
 
-type ('s,'t,'k) channel = Chan of 's * 't * 'k Ivar.t
+type ('s,'t,'k) sess = Chan of 's * 't * 'k Ivar.t
 
 let send (get,set) v p =
   let Chan(s,t,c) = get p in
   let c' = Ivar.create () in
-  Ivar.fill c (Shot(s,v,c'));
+  Ivar.fill c (Shot(t,v,c'));
   Ivar.create_full (set p (Chan(s,t,c')), ())
                                    
 let recv (get,set) p =
@@ -59,7 +59,7 @@ let send_slot (get0,set0) (get1,set1) p =
   let e, q = get1 p, set1 p Empty in
   let Chan(s,t,c) = get0 q in
   let c' = Ivar.create () in
-  Ivar.fill c (Pass(s,e,c'));
+  Ivar.fill c (Pass(t,e,c'));
   Ivar.create_full (set0 q (Chan(s,t,c')), ())
 
 let send_chan = send_slot
@@ -76,20 +76,20 @@ let send_new_chan (get0,set0) (get1,set1) p =
   let Chan(s,t,c) = get0 p in
   let c' = Ivar.create () in
   let cc = Ivar.create () in
-  let e = Pass(s,Chan(t,s,cc),c') in
+  let e = Pass(t,Chan(t,s,cc),c') in
   Ivar.fill c e;
   Ivar.create_full (set1 (set0 p (Chan(s,t,c'))) (Chan(s,t,cc)), ())
 
 let select_left (get,set) p =
   let Chan(s,t,c) = get p in
   let c' = Ivar.create () in
-  Ivar.fill c (BranchLeft(s,c'));
+  Ivar.fill c (BranchLeft(t,c'));
   Ivar.create_full (set p (Chan(s,t,c')), ())
                        
 let select_right (get,set) p =
   let Chan(s,t,c) = get p in
   let c' = Ivar.create () in
-  Ivar.fill c (BranchRight(s,c'));
+  Ivar.fill c (BranchRight(t,c'));
   Ivar.create_full (set p (Chan(s,t,c')), ())
 
 let branch (get0,set0) ((get1,set1),f1) ((get2,set2),f2) p =
@@ -105,7 +105,7 @@ let branch (get0,set0) ((get1,set1),f1) ((get2,set2),f2) p =
   ret
 
 
-let fork (get,set) m p =
+let fork ~new_chan:(get,set) m p =
   let ivar = Ivar.create () in
   Scheduler.within (fun _ -> ignore (m (Chan(Neg,Pos,ivar),all_empty)));
   Ivar.create_full (set p (Chan(Pos,Neg,ivar)), ())
@@ -127,7 +127,7 @@ end
 module Routine = struct
   let send v (Chan(s,t,c)) =
     let c' = Ivar.create () in
-    Ivar.fill c (Shot(s,v,c'));
+    Ivar.fill c (Shot(t,v,c'));
     Ivar.create_full (Chan(s,t,c'),())
   
   let recv (Chan(s,t,c)) =

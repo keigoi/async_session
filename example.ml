@@ -34,7 +34,7 @@ val q :
 *)
 
 let r () = 
-  fork _0 (q ()) >>
+  fork ~new_chan:_0 (q ()) >>
   p ()
 (*
 val r :
@@ -66,7 +66,7 @@ let q2 () =
   close _1
 
 let r2 () =
-  fork _0 (q2 ()) >>
+  fork ~new_chan:_0 (q2 ()) >>
   p2 ()
 
 (* output:
@@ -95,7 +95,7 @@ let rec q3 () =
         close _0)
 
 let r3 () =
-  fork _0 (q3 ()) >>
+  fork ~new_chan:_0 (q3 ()) >>
   p3 1
 
 (* output:
@@ -137,7 +137,7 @@ let r5 () =
   let rec duplicate = function
     | 0 -> ret ()
     | n ->
-       fork _1 proc >>
+       fork ~new_chan:_1 proc >>
        LinList.put _0 _1 >>
        duplicate (n-1)
   in
